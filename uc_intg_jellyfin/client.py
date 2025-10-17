@@ -33,8 +33,8 @@ class JellyfinClient:
         device_id = "jellyfin-integration-ucapi"
         device_name = socket.gethostname()
         app_name = "Jellyfin Integration"
-        app_version = "1.0.0"
-        user_agent = "Jellyfin-Integration/1.0.0"
+        app_version = "1.0.1"
+        user_agent = "Jellyfin-Integration/1.0.1"
         
         self._client.config.app(app_name, app_version, device_name, device_id)
         self._client.config.http(user_agent)
@@ -280,40 +280,57 @@ class JellyfinClient:
             return False
     
     def get_artwork_url(self, item: Dict[str, Any], max_width: int = 600) -> Optional[str]:
-        """Get BETTER artwork URL for an item - tries Series/Season images first."""
+        """Get best artwork URL for an item, preferring Backdrop over Primary.
+
+        Priority:
+        - Episodes: Series Backdrop > Episode Backdrop > Series Primary > Season Primary > Episode Primary
+        - Movies/Other: Item Backdrop > Item Primary
+        """
         if not self._is_connected:
             return None
         
         try:
-            # Priority order for TV shows: Series Primary > Season Primary > Episode Primary
+            # Prefer widescreen backdrops when available; fall back to primaries
             artwork_id = None
             artwork_type = None
             
-            # For episodes, try to get series artwork first (better than episode thumbnail)
+            # For episodes, try to get series backdrop first (better than episode thumbnail)
             if item.get("Type") == "Episode":
                 series_id = item.get("SeriesId")
-                if series_id and item.get("SeriesPrimaryImageTag"):
+                if series_id and item.get("SeriesBackdropImageTags"):
+                    artwork_id = series_id
+                    artwork_type = "Backdrop"
+                    _LOG.debug("Using Series Backdrop image for episode")
+                elif item.get("BackdropImageTags"):
+                    # Use episode backdrop if present
+                    artwork_id = item["Id"]
+                    artwork_type = "Backdrop"
+                    _LOG.debug("Using Episode Backdrop image")
+                elif series_id and item.get("SeriesPrimaryImageTag"):
+                    # Fallback to series primary
                     artwork_id = series_id
                     artwork_type = "Primary"
                     _LOG.debug("Using Series Primary image for episode")
-                elif item.get("SeasonId") and item.get("ImageTags", {}).get("Primary"):
-                    # Fallback to season image
+                elif item.get("SeasonId"):
+                    # Fallback to season primary (assume season has a primary image)
                     artwork_id = item.get("SeasonId")
                     artwork_type = "Primary"
                     _LOG.debug("Using Season Primary image for episode")
                 elif "Primary" in item.get("ImageTags", {}):
-                    # Last resort: episode image
+                    # Last resort: episode primary
                     artwork_id = item["Id"]
                     artwork_type = "Primary"
                     _LOG.debug("Using Episode Primary image")
             else:
-                # For movies and other content, use Primary or Backdrop
-                if "Primary" in item.get("ImageTags", {}):
-                    artwork_type = "Primary"
-                    artwork_id = item["Id"]
-                elif "Backdrop" in item.get("ImageTags", {}):
+                # For movies and other content, prefer Backdrop then Primary
+                if item.get("BackdropImageTags"):
                     artwork_type = "Backdrop"
                     artwork_id = item["Id"]
+                    _LOG.debug("Using Item Backdrop image")
+                elif "Primary" in item.get("ImageTags", {}):
+                    artwork_type = "Primary"
+                    artwork_id = item["Id"]
+                    _LOG.debug("Using Item Primary image")
             
             if artwork_id and artwork_type:
                 url = str(self._client.jellyfin.artwork(artwork_id, artwork_type, max_width))

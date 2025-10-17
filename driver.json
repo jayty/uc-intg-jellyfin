@@ -1,6 +1,6 @@
 {
   "driver_id": "uc_intg_jellyfin",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "min_core_api": "0.20.0",
   "name": {
     "en": "Jellyfin"
@@ -13,7 +13,7 @@
     "name": "Meir Miyara",
     "email": "meir.miyara@gmail.com"
   },
-  "home_page": "https://github.com/your-username/uc-intg-jellyfin",
+  "home_page": "https://github.com/mase1981/uc-intg-jellyfin",
   "setup_data_schema": {
     "title": {
       "en": "Jellyfin Server Setup"

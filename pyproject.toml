@@ -37,6 +37,7 @@ dependencies = [
 
 [tool.setuptools_scm]
 write_to = "uc_intg_jellyfin/_version.py"
+fallback_version = "1.0.1"
 
 [tool.setuptools.packages.find]
 include = ["uc_intg_jellyfin*"]
