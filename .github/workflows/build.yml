@@ -34,18 +34,23 @@ jobs:
       - name: Get version and id
         #Id needed for env output variable
         id: get-version-and-id
+        shell: bash
+        env:
+          VERSION_INPUT: ${{ github.event.inputs.version }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          # Determine version: from manual input or tag (remove 'v' prefix)
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            VERSION=${{ github.event.inputs.version }}
+          # Determine version: from manual input or tag ref (remove 'v' prefix)
+          if [ -n "${VERSION_INPUT}" ]; then
+            VERSION="${VERSION_INPUT}"
           else
-            VERSION=${GITHUB_REF#refs/tags/v}
+            # When triggered by tag push, REF_NAME is like v1.0.1
+            VERSION="${REF_NAME#v}"
           fi
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "DRIVER_ID=$(jq .driver_id -r driver.json)" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "DRIVER_ID=$(jq .driver_id -r driver.json)" >> "$GITHUB_ENV"
           # Save to Github output to later use it in Create Release job
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "DRIVER_ID=$(jq .driver_id -r driver.json)" >> $GITHUB_OUTPUT
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "DRIVER_ID=$(jq .driver_id -r driver.json)" >> "$GITHUB_OUTPUT"
 
       - name: Build
         run: |
