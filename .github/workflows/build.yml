@@ -5,6 +5,11 @@ name: "Build & Draft Release"
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build (e.g., 1.0.1). Leave empty to use tag context"
+        required: false
 
 env:
   INTG_NAME: jellyfin
@@ -30,8 +35,12 @@ jobs:
         #Id needed for env output variable
         id: get-version-and-id
         run: |
-          # Extract version from git tag (remove 'v' prefix)
-          VERSION=${GITHUB_REF#refs/tags/v}
+          # Determine version: from manual input or tag (remove 'v' prefix)
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION=${{ github.event.inputs.version }}
+          else
+            VERSION=${GITHUB_REF#refs/tags/v}
+          fi
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "DRIVER_ID=$(jq .driver_id -r driver.json)" >> $GITHUB_ENV
           # Save to Github output to later use it in Create Release job
